@@ -1,0 +1,37 @@
+version: '3.7'
+services:
+  loadbalancer:
+    command: >
+      --logLevel="DEBUG"
+      --docker
+      --docker.domain="traefik"
+      --docker.watch
+      --entryPoints="Name:http Address::80"
+      --defaultentrypoints="http"
+      --web
+      --web.address=":8080"
+    image: traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+
+  hello-world-1:
+    command: -listen=:8081 -text="hello world 1"
+    image: hashicorp/http-echo
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=hello-world-1"
+      - "traefik.docker.network=web"
+      - "traefik.frontend.rule=Path:/hello"
+      - "traefik.port=8081"
+
+
+  # pgbouncer-1:
+  # pgbouncer-2:
+
+  # postgres-write:
+  # postgres-read-1:
+  # postgres-read-2:

@@ -1,28 +1,25 @@
-FROM alpine:latest AS build_stage
-
-MAINTAINER brainsam@yandex.ru
-
-WORKDIR /
-RUN apk --update add git python py-pip build-base automake libtool m4 autoconf libevent-dev openssl-dev c-ares-dev
-RUN pip install docutils
-RUN git clone https://github.com/pgbouncer/pgbouncer.git src
-
-WORKDIR /bin
-RUN ln -s ../usr/bin/rst2man.py rst2man
-
-WORKDIR /src
-RUN mkdir /pgbouncer
-RUN git submodule init
-RUN git submodule update
-RUN ./autogen.sh
-RUN	./configure --prefix=/pgbouncer --with-libevent=/usr/lib
-RUN make
-RUN make install
-RUN ls -R /pgbouncer
+FROM ubuntu:latest AS build_stage
+RUN apt update -y \
+    && apt install -y git python python-pip automake libtool m4 autoconf libevent-dev openssl libssl-dev pkg-config curl build-essential\
+    && pip install docutils \
+    && curl -L -o pandoc-2.7.1.tar.gz https://github.com/jgm/pandoc/releases/download/2.7.1/pandoc-2.7.1-linux.tar.gz \
+    && tar -zxvf pandoc-2.7.1.tar.gz \
+    && mv pandoc-2.7.1/bin/* /usr/bin \
+    && git clone https://github.com/pgbouncer/pgbouncer.git src \
+    && cd /bin \
+    && ln -s ../usr/bin/rst2man.py rst2man \
+    && cd /src \
+    && mkdir /pgbouncer \
+    && git submodule init \
+    && git submodule update \
+    && ./autogen.sh \
+    && ./configure --prefix=/pgbouncer --with-libevent=/usr/lib \
+    && make \
+    && make install \
+    && ls -R /pgbouncer
 
 FROM alpine:latest
 RUN apk --update add libevent openssl c-ares
-WORKDIR /
+ADD entrypoint.sh /
 COPY --from=build_stage /pgbouncer /pgbouncer
-ADD entrypoint.sh ./
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
